@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" data-theme="white">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Streak</title>
+<meta name="description" content="A calm, private daily streak journal — log your day, rate it, keep the chain.">
+<meta name="theme-color" content="#f4f4f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Streak">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/app.css">
+<script>
+  // apply the saved appearance before first paint so there's no flash
+  (function(){
+    try{
+      var e = (localStorage.getItem("streakly-current") || "").trim().toLowerCase();
+      var s = JSON.parse(localStorage.getItem(e ? "streakly-v1:" + e : "streakly-v1") || "{}");
+      var t = s.theme === "dark" ? "night" : s.theme === "light" ? "cream" : (s.theme || "white");
+      document.documentElement.dataset.theme = t;
+      var c = {white:"#f4f4f6", cream:"#efe5cc", night:"#121314"}[t] || "#f4f4f6";
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", c);
+    }catch(err){}
+  })();
+</script>
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <div class="brand"><img src="icons/icon-192.png" alt=""><span class="t" id="brandTitle">Streak</span></div>
+  <button class="iconbtn press" id="themeBtn" aria-label="Change appearance"></button>
+  <button class="iconbtn press" id="searchBtn" aria-label="Search journal"></button>
+  <button class="avatar press" id="avatarBtn" aria-label="Profile and settings"></button>
+</header>
+
+<main class="shell"><div class="wrap" id="view"></div></main>
+
+<nav class="dock" id="dock" aria-label="Sections"></nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastAct" class="hidden"></button></div>
+<div class="hlmenu hidden" id="hlMenu" role="toolbar" aria-label="Highlight colour">
+  <button class="hl-yellow" data-color="yellow" aria-label="Yellow"></button>
+  <button class="hl-green" data-color="green" aria-label="Green"></button>
+  <button class="hl-blue" data-color="blue" aria-label="Blue"></button>
+  <button class="hl-pink" data-color="pink" aria-label="Pink"></button>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

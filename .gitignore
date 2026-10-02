@@ -1,0 +1,6 @@
+# personal data — never commit
+migration/
+*.backup.json
+streak-backup-*.json
+.DS_Store
+node_modules/
