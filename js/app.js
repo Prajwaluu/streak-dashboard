@@ -16,6 +16,7 @@ const P = {
   sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   return:'<path d="m8 5-5 5 5 5M3 10h11a6 6 0 0 1 0 12"/>',
   check:'<path d="M20 6 9 17l-5-5"/>', x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  balance:'<path d="M12 3v17M5 20h14M4 7h16M6 7l-4 7h8L6 7ZM18 7l-4 7h8l-4-7Z"/><path d="M2 14a4 4 0 0 0 8 0M14 14a4 4 0 0 0 8 0"/>',
   chevL:'<path d="m15 18-6-6 6-6"/>', chevR:'<path d="m9 18 6-6-6-6"/>', plus:'<path d="M12 5v14M5 12h14"/>',
   search:'<circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
@@ -72,7 +73,7 @@ function save(){
   if(!saved) toast("Storage is full — export a backup and remove a large book or image.");
   return saved;
 }
-const STATUS = { full:["Conquered","var(--win)"], partial:["Conquered","var(--win)"], missed:["Defeated","var(--miss)"] };
+const STATUS = { full:["Conquered","var(--win)"], partial:["Tempered","var(--part)"], missed:["Defeated","var(--miss)"] };
 const MOOD_COL = ["#f5c84c","#7cc4f2","#b9c0cc","#b9a6f5","#f29b9b"];
 function day(k){ return S.days[k] || (S.days[k] = {status:null, rating:null, mood:null, note:""}); }
 function dayObj(k){ return S.days[k] || {status:null, rating:null, mood:null, note:""}; }
@@ -182,42 +183,44 @@ function animateDials(root){
 }
 
 function heroCard(){
-  const n = streak(S, today), nx = nextMilestone(n), pv = prevMilestone(n);
+  const n = streak(S, today), nx = nextMilestone(n), pv = prevMilestone(n), best = longestStreak(S, today);
   const steps = Math.min(nx - pv, 14), fraction = (n - pv) / Math.max(nx - pv, 1);
   return `<section class="streak-story" aria-label="${n} day streak, ${nx - n} days to the ${nx}-day milestone">
     <div class="streak-story-main"><div class="streak-count">${fireIcon(n, "streak-flame")}<b class="num">${n}</b><span>day${n === 1 ? "" : "s"}<br>in a row</span></div>
-      <div class="streak-best">Personal best <b class="num">${longestStreak(S, today)} days</b></div></div>
+      <div class="streak-best">Personal best <b class="num">${best} day${best === 1 ? "" : "s"}</b></div></div>
     <div class="milestone-steps" aria-hidden="true">${Array.from({length:steps}, (_, i) => `<i class="${(i + 1) / steps <= fraction ? "lit" : ""}"></i>`).join("")}</div>
     <div class="streak-story-foot"><span>${n ? "One day at a time." : "Every streak starts with a day."}</span><span><b>${nx - n}</b> to ${nx} days ${ic("flag","xs")}</span></div>
   </section>`;
 }
 function dayEditor(k, nav){
   const o = dayObj(k), isToday = k === today, future = k > today, outcome = outcomeOf(S, k);
+  const editorId = `${nav ? "today" : "entry"}-${k}`;
   const r = o.rating, hasContext = r != null || o.mood != null;
-  const message = future ? "A little space for your plans." : outcome === "full" ? "You showed up. That counts." : outcome === "missed" ? "An honest day. A fresh start ahead." : "What will you call this day?";
+  const message = future ? "A little space for your plans." : outcome === "full" ? "A day well fought. Your flame grows." : outcome === "partial" ? "The balance holds. Your streak stays alive." : outcome === "missed" ? "Let today rest. Come back to the fire tomorrow." : "A triumph, a balance, or a fresh start. Be honest.";
+  const choices = [["full","check","I rose to the challenge"],["partial","balance","I found my balance"],["missed","return","I’ll begin again"]];
   return `<section class="day-editor" data-editor="${k}">
     <div class="daynav">
-      ${nav ? `<button class="iconbtn press" data-act="prev" aria-label="Previous day">${ic("chevL","sm")}</button>` : ""}
       <div class="d"><h2>${isToday ? "Today" : future ? "Looking ahead" : "Looking back"}</h2><p>${esc(niceDate(k, {weekday:"long", day:"numeric", month:"long", ...(fromIso(k).getFullYear() !== fromIso(today).getFullYear() ? {year:"numeric"} : {})}))}</p></div>
+      ${nav ? `<button class="iconbtn press" data-act="prev" aria-label="Previous day">${ic("chevL","sm")}</button>` : ""}
       ${nav ? `${!isToday ? `<button class="chip press" data-act="today">Today</button>` : ""}<button class="iconbtn press" data-act="next" aria-label="Next day" ${k >= today ? "disabled" : ""}>${ic("chevR","sm")}</button>` : ""}
     </div>
     <div class="outcomes" role="group" aria-label="How did the day go">
-      ${["full","missed"].map(st => `<button class="outcome ${st} ${outcome === st ? "chosen" : ""}" data-st="${st}" aria-label="${STATUS[st][0]}" aria-pressed="${outcome === st}" ${future ? "disabled" : ""}>
-        <span class="outcome-icon">${ic(st === "full" ? "check" : "x")}</span><strong>${STATUS[st][0]}</strong><span class="outcome-caption">${st === "full" ? "I made it count" : "I’ll come back"}</span><span class="outcome-picked">${ic("check","xs")}</span></button>`).join("")}
+      ${choices.map(([st,icon,caption]) => `<button class="outcome ${st} ${outcome === st ? "chosen" : ""}" data-st="${st}" aria-label="${STATUS[st][0]}" aria-pressed="${outcome === st}" aria-describedby="day-response-${editorId}" ${future ? "disabled" : ""}>
+        <span class="outcome-icon">${ic(icon)}</span><span class="outcome-copy"><strong>${STATUS[st][0]}</strong><span class="outcome-caption">${caption}</span></span><span class="outcome-picked">${ic("check","xs")}</span></button>`).join("")}
     </div>
-    <p class="day-response ${outcome || ""}">${message}</p>
+    <p id="day-response-${editorId}" class="day-response ${outcome || ""}" aria-live="polite">${message}</p>
     <details class="day-context" ${contextOpen ? "open" : ""}>
       <summary><span>${ic("sliders","sm")} ${hasContext ? "Your day in detail" : "Add a little context"}</span><span class="context-preview">${r != null ? r + "/10" : "Optional"}${o.mood != null ? " · " + esc(MOODS[o.mood]?.[1] || "") : ""}${ic("chevR","xs")}</span></summary>
-      <div class="context-content"><div class="rating-head"><label for="day-rating-${k}">How did it feel?</label><output for="day-rating-${k}" data-rating-value>${r == null ? "Not rated" : r + "/10"}</output></div>
-        <input class="day-rating" id="day-rating-${k}" data-rating type="range" min="0" max="10" step="1" value="${r ?? 5}" aria-label="Rating out of ten" aria-valuetext="${r == null ? "Not rated; choose a value" : r + " out of 10"}" style="--rating-fill:${(r ?? 5) * 10}%" ${future ? "disabled" : ""}>
+      <div class="context-content"><div class="rating-head"><label for="day-rating-${editorId}">How did it feel?</label><output for="day-rating-${editorId}" data-rating-value>${r == null ? "Not rated" : r + "/10"}</output></div>
+        <input class="day-rating" id="day-rating-${editorId}" data-rating type="range" min="0" max="10" step="1" value="${r ?? 5}" aria-label="Rating out of ten" aria-valuetext="${r == null ? "Not rated; choose a value" : r + " out of 10"}" style="--rating-fill:${(r ?? 5) * 10}%" ${future ? "disabled" : ""}>
         <div class="rating-ends"><span>A difficult day</span>${r != null ? '<button data-clear-rating>Clear rating</button>' : ""}<span>A great day</span></div>
         <div class="moods" role="group" aria-label="Mood">${MOODS.map(([e, t], i) => `<button class="mood press ${o.mood === i ? "on" : ""}" data-mood="${i}" aria-label="${t}" aria-pressed="${o.mood === i}" ${future ? "disabled" : ""}><span class="e">${e}</span>${t}</button>`).join("")}</div>
       </div>
     </details>
     <div class="daily-reflection">
-      <div class="note-tools"><span class="small">Daily notes</span>${ic("edit","sm")}</div>
+      <div class="note-tools"><label for="day-note-${editorId}">A line worth keeping.</label>${ic("edit","sm")}</div>
       <div class="note-wrap"><button class="chip on press selq hidden" data-act="selq">${ic("sparkle","xs")} Add to quotes</button>
-        <textarea class="input" data-note rows="4" aria-label="Daily notes" placeholder="A moment worth keeping…">${esc(o.note || "")}</textarea>
+        <textarea class="input" id="day-note-${editorId}" data-note rows="3" aria-label="Daily notes" placeholder="What stayed with you today?">${esc(o.note || "")}</textarea>
       </div><div class="note-meta"><span data-note-saved>Saved as you write</span><span data-wc></span></div>
     </div>
   </section>`;
@@ -275,11 +278,11 @@ function bannerCard(){
 }
 function weekCard(){
   const L = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-  const row = weekRow(S, today).map(x => ({...x, cls:x.cls === "partial" ? "full" : x.cls === "missed" && !statusOf(S, x.k) ? "unlogged" : x.cls}));
+  const row = weekRow(S, today).map(x => ({...x, cls:x.cls === "missed" && !statusOf(S, x.k) ? "unlogged" : x.cls}));
   const won = row.filter(x => x.cls === "full" || x.cls === "partial").length;
-  return `<section class="card"><div class="card-head"><span class="h3">${ic("flame","sm")} This week</span><span class="tiny muted">${won} of ${row.filter(x => x.k <= today).length} days won</span></div>
+  return `<section class="card week-section"><div class="card-head"><span class="h3">This week</span><span class="tiny muted">${won} of ${row.filter(x => x.k <= today).length} days kept alive</span></div>
     <div class="week">${row.map((x, i) => `<button class="press ${x.k === selected ? "sel" : ""}" data-pick="${x.k}" ${x.k > today ? "disabled" : ""} aria-label="${esc(niceDate(x.k))}">
-      <div class="l">${L[i]}</div><div class="n">${x.date}</div><div class="c ${x.cls}">${x.cls === "full" || x.cls === "partial" ? ic("check","xs") : x.cls === "missed" ? ic("x","xs") : ""}</div></button>`).join("")}</div></section>`;
+      <div class="l">${L[i]}</div><div class="n">${x.date}</div><div class="c ${x.cls}">${x.cls === "full" ? ic("check","xs") : x.cls === "partial" ? ic("balance","xs") : x.cls === "missed" ? ic("x","xs") : ""}</div></button>`).join("")}</div></section>`;
 }
 function backupFoot(){
   const n = Object.values(S.days).filter(o => o.status).length;
@@ -433,13 +436,14 @@ function setStatus(k, st, onChange){
   if(k > today) return toast("Can’t log a future day yet");
   const before = streak(S, today);
   const o = day(k), prev = o.status;
-  if(!["full","missed"].includes(st)) return;
+  if(!["full","partial","missed"].includes(st)) return;
   o.status = outcomeOf(S, k) === st ? null : st;
   save(); onChange(); renderChrome();
   const after = streak(S, today);
   const undo = {action:"Undo", fn: () => { day(k).status = prev; save(); onChange(); renderChrome(); }};
   if(after > before && MILESTONES.includes(after)){ celebrate(); toast(`${after}-day milestone. Remarkable.`, undo); }
   else if(o.status === "full") toast(`Conquered — streak: ${after} day${after === 1 ? "" : "s"}`, undo);
+  else if(o.status === "partial") toast(`Tempered — flame kept alive: ${after} day${after === 1 ? "" : "s"}`, undo);
   else if(o.status === "missed") toast("Defeated today. The comeback starts tomorrow.", undo);
   else toast("Cleared", undo);
 }
@@ -544,7 +548,7 @@ function calendarView(){
   const curY = fromIso(today).getFullYear();
   const mode = S.calendarMode;
   const legend = mode === "status"
-    ? `<span><i style="background:var(--win)"></i>Conquered</span><span><i style="background:var(--miss)"></i>Defeated</span>`
+    ? `<span><i style="background:var(--win)"></i>Conquered</span><span><i style="background:var(--part)"></i>Tempered</span><span><i style="background:var(--miss)"></i>Defeated</span>`
     : mode === "rating"
     ? `<span>0<span class="ramp">${[0,3,5,7,10].map(r => `<i style="background:color-mix(in srgb, var(--accent) ${18 + r*8.2}%, var(--surface-3))"></i>`).join("")}</span>10</span>`
     : MOODS.map(([e, t], i) => `<span><i style="background:${MOOD_COL[i]}"></i>${t}</span>`).join("");
@@ -556,13 +560,13 @@ function calendarView(){
     for(let d = 1; d <= nd; d++){
       const k = viewYear + "-" + String(m+1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
       const o = S.days[k];
-      if(o && isWin(o.status)) won++;
+      if(k <= today && o && isWin(o.status)) won++;
       const {cls, style} = dayStyle(k);
       const c = ["cd", cls, k === today ? "today" : "", k > today ? "future" : "", o && o.note && o.note.trim() ? "noted" : ""].filter(Boolean).join(" ");
       cells += `<button class="${c}" data-day="${k}" style="${style}" aria-label="${esc(niceDate(k, {weekday:"long", day:"numeric", month:"long", year:"numeric"}))}${o && o.status ? ", " + STATUS[o.status][0] : ""}">${d}</button>`;
     }
     const isCur = viewYear === curY && m === fromIso(today).getMonth();
-    months += `<section class="card month ${isCur ? "cur" : ""}"><div class="mh"><b>${MONTHS[m]}</b><span>${won ? won + " won" : ""}</span></div><div class="g7">${cells}</div></section>`;
+    months += `<section class="card month ${isCur ? "cur" : ""}"><div class="mh"><b>${MONTHS[m]}</b><span>${won ? won + " kept alive" : ""}</span></div><div class="g7">${cells}</div></section>`;
   }
   return `<div class="view">
     <div style="margin-bottom:18px">${bannerCard()}</div>
@@ -634,13 +638,13 @@ function insightsView(){
     </header>
     <section class="rhythm-panel" aria-labelledby="rhythm-heading">
       <div class="rhythm-top"><h2 id="rhythm-heading">${tone}</h2><span>${dateRange}</span></div>
-      <div class="outcome-totals"><div class="conquered-total"><b class="num">${I.conquered}</b><span>Conquered</span></div><span class="totals-divider"></span><div class="defeated-total"><b class="num">${I.defeated}</b><span>Defeated</span></div><p>${I.logged ? `<strong>${I.rate}%</strong> of your<br>logged days conquered` : "A blank page.<br>A fresh beginning."}</p></div>
+      <div class="outcome-totals"><div class="conquered-total"><b class="num">${I.conquered}</b><span>Conquered</span></div><div class="tempered-total"><b class="num">${I.tempered}</b><span>Tempered</span></div><div class="defeated-total"><b class="num">${I.defeated}</b><span>Defeated</span></div><p>${I.logged ? `<strong>${I.rate}%</strong> of logged days conquered` : "A blank page. A fresh beginning."}</p></div>
       <div class="rhythm-timeline" style="--rhythm-columns:${Math.min(I.span,30)}" role="group" aria-label="Daily outcomes over the last ${I.span} days">${timeline}</div>
       <div class="rhythm-caption"><span>${I.unlogged} not logged <i>·</i> Tap a day to revisit</span><span>${I.logged}/${I.span} days logged</span></div>
       <div class="period-comparison ${I.delta != null && I.delta > 0 ? "improving" : ""}">${ic(I.delta != null && I.delta > 0 ? "chart" : "history","sm")}<span>${compare}</span></div>
       ${!I.logged ? '<button class="btn primary press" data-act="opentoday">Make today count ' + ic("chevR","sm") + '</button>' : ""}
     </section>
-    <dl class="insight-numbers"><div><dt>Current streak</dt><dd class="num">${I.currentStreak}<span> days</span></dd></div><div><dt>Personal best</dt><dd class="num">${I.longest}<span> days</span></dd></div><div><dt>Average day</dt><dd class="num">${I.avg == null ? "—" : I.avg.toFixed(1)}<span>${I.avg == null ? "Not rated yet" : " / 10"}</span></dd></div></dl>
+    <dl class="insight-numbers"><div><dt>Current streak</dt><dd class="num">${I.currentStreak}<span> day${I.currentStreak === 1 ? "" : "s"}</span></dd></div><div><dt>Personal best</dt><dd class="num">${I.longest}<span> day${I.longest === 1 ? "" : "s"}</span></dd></div><div><dt>Average day</dt><dd class="num">${I.avg == null ? "—" : I.avg.toFixed(1)}<span>${I.avg == null ? "Not rated yet" : " / 10"}</span></dd></div></dl>
     <div class="insight-duo">
       <section class="pattern-panel"><div class="pattern-icon">${ic("calendar")}</div><h2>${strongestTitle}</h2><p>${strongestText}</p>
         <div class="weekday-pattern">${I.weekdays.map((w,i) => `<div aria-label="${weekdayNames[i]}: ${w.won} of ${w.logged} logged days conquered" title="${w.won}/${w.logged} logged days"><span>${weekdays[i]}</span><div class="weekday-track"><i style="height:${w.logged ? w.won / w.logged * 100 : 0}%" class="${I.bestDays.includes(i) ? "best" : ""}"></i></div><b>${w.logged ? Math.round(w.won/w.logged*100) + "%" : "—"}</b></div>`).join("")}</div>
@@ -661,7 +665,7 @@ function insightsView(){
         <div class="month-pattern">${I.months.map((n,i) => `<div aria-label="${MONTHS[i]}: ${i > currentMonth ? "upcoming" : n + " conquered days"}"><span>${MONTHS[i].slice(0,3)}</span><div><i style="width:${n/monthsMax*100}%"></i></div><b class="num">${i > currentMonth ? "—" : n}</b></div>`).join("")}</div>
       </section>
     </div>
-    <section class="milestone-section"><div class="insight-section-head"><div><h2>The next little mountain</h2><p>${nx - I.currentStreak} more conquered days in a row to reach ${nx}.</p></div>${ic("flag")}</div>
+    <section class="milestone-section"><div class="insight-section-head"><div><h2>The next little mountain</h2><p>${nx - I.currentStreak} more days keeping the flame alive to reach ${nx}. Conquered and Tempered both count.</p></div>${ic("flag")}</div>
       <div class="milestone-path">${displayedMilestones.map(m => `<div class="${m <= I.longest ? "earned" : m === nextUnearned ? "up-next" : ""}"><span>${m <= I.longest ? ic("check","xs") : ic("flag","xs")}</span><b class="num">${m}<small> days</small></b><p>${m <= I.longest ? "Earned" : m === nextUnearned ? "Next to earn" : "Ahead"}</p></div>`).join("")}</div>
       <p class="insights-close">A day is a page. You’re still writing.</p>
     </section>
@@ -835,7 +839,7 @@ async function openSettings(){
       ${!isStandalone() ? `<div class="sec-label">Install</div><div class="list"><div class="li"><span class="ic">${ic("phone","sm")}</span><span class="tx">Add to Home Screen<small>In Safari tap Share → Add to Home Screen. It opens full-screen, works offline, and never needs re-signing.</small></span></div></div>` : ""}
       <div class="sec-label">Gestures &amp; keys</div>
       <div class="list" style="margin-bottom:10px"><div class="li"><span class="ic">${ic("flame","sm")}</span><span class="tx">Today panel<small>Swipe in from the left edge, or tap the flame in the top bar</small></span></div></div>
-      <div class="list"><div class="li"><span class="ic">${ic("key","sm")}</span><span class="tx small"><span class="kbd">1</span> Conquered · <span class="kbd">2</span> Defeated · <span class="kbd">←</span> <span class="kbd">→</span> day · <span class="kbd">T</span> today · <span class="kbd">/</span> search · <span class="kbd">C</span> <span class="kbd">I</span> <span class="kbd">J</span> views</span></div></div>
+      <div class="list"><div class="li"><span class="ic">${ic("key","sm")}</span><span class="tx small"><span class="kbd">1</span> Conquered · <span class="kbd">2</span> Tempered · <span class="kbd">3</span> Defeated · <span class="kbd">←</span> <span class="kbd">→</span> day · <span class="kbd">T</span> today · <span class="kbd">/</span> search · <span class="kbd">C</span> <span class="kbd">I</span> <span class="kbd">J</span> views</span></div></div>
       <p class="tiny muted" style="text-align:center;margin-top:18px">Streak · nothing leaves this device unless you export it.</p>`;
     $("#sProfile", sh.el).onclick = () => openProfile(draw);
     $$("[data-theme]", sh.el).forEach(b => b.onclick = () => { S.theme = b.dataset.theme; save(); refresh(); draw(); });
@@ -993,7 +997,7 @@ function welcome(){
   welcomeSheet = openSheet({title:"", html:`<div style="text-align:center;padding:4px 4px 0">
     <img src="icons/icon-192.png" alt="" style="width:76px;height:76px;border-radius:20px;box-shadow:var(--shadow-md)">
     <div class="h1" style="margin-top:16px">Every streak starts with <em>a day.</em></div>
-    <p class="muted" style="margin:10px auto 22px;max-width:380px">Choose Conquered or Defeated, keep a note, and watch your rhythm take shape.</p>
+    <p class="muted" style="margin:10px auto 22px;max-width:380px">Conquered, Tempered, or Defeated. Find your balance, keep a note, and watch your rhythm take shape.</p>
     <button class="btn primary block press" id="wFresh" style="height:48px">Start my streak</button>
     <label class="btn ghost block press" style="height:48px;margin-top:10px;cursor:pointer">${ic("upload","sm")} Import a backup<input type="file" accept="application/json,.json" id="wIn" hidden></label>
     <p class="tiny muted" style="margin-top:16px">Your entries stay on this device. Export a backup to keep or move your history.</p></div>`});
@@ -1041,7 +1045,7 @@ document.addEventListener("keydown", e => {
   if(/INPUT|TEXTAREA|SELECT/.test(tag)) return;
   const k = e.key.toLowerCase();
   const dv = drawerOpen || pinned(), redraw = () => { renderDrawer(); render(); };
-  if(dv && ["1","2"].includes(k)){ setStatus(selected, ["full","missed"][+k - 1], redraw); }
+  if(dv && ["1","2","3"].includes(k)){ setStatus(selected, ["full","partial","missed"][+k - 1], redraw); }
   else if(dv && k === "arrowleft"){ selected = addDays(selected, -1); renderDrawer(); }
   else if(dv && k === "arrowright" && selected < today){ selected = addDays(selected, 1); renderDrawer(); }
   else if(k === "t") openDrawer(today);

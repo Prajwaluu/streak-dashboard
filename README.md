@@ -42,8 +42,8 @@ The tests run the old app's streak, year-stats and momentum code next to the new
 
 ## Today and Insights
 
-Today offers **Conquered** or **Defeated**, with optional rating and mood details and one daily notes field. Legacy partial wins display as Conquered while the original saved records remain intact. A Defeated day ends the current streak; an unlogged today leaves yesterday’s streak available.
+Today offers **Conquered**, **Tempered**, and **Defeated**, with optional rating and mood details and one daily notes field. Tempered is the middle ground: a balanced day that keeps the flame alive. Conquered and Tempered both continue a streak; Defeated ends it. An unlogged today leaves yesterday’s streak available. Legacy partial days now display as Tempered, using their original saved values.
 
-Insights offers 7-, 30-, and 90-day views. Conquest rates use explicitly logged days, unlogged days stay separate, and weekday patterns require at least three observations. Tap the day timeline to revisit an entry. A comeback is a Conquered day immediately after a Defeated day.
+Insights offers 7-, 30-, and 90-day views with separate counts for all three outcomes. Conquest rates count only Conquered days out of all explicitly logged outcomes; Tempered days keep streaks alive without inflating conquest counts. Unlogged days stay separate, and weekday patterns require at least three observations. Tap the day timeline to revisit an entry. A comeback is a Conquered day immediately after a Defeated day. Keyboard shortcuts are 1 for Conquered, 2 for Tempered, and 3 for Defeated.
 
 The flame uses a locally bundled **Three.js 0.186.1** shader with a moving flame silhouette, flowing heat, a pulsing orange glow and rising embers. One 192×192 WebGL scene serves both display canvases at up to 30fps. It stops when hidden, offscreen or inactive, renders a still flame for reduced motion, and keeps the SVG fallback when WebGL is unavailable. The Three.js bundle and flame are cached for offline use; its MIT license is in `js/vendor/THREE-LICENSE.txt`.
