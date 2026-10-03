@@ -1077,7 +1077,7 @@ refresh();
 if(!pinned()) setDrawer(0, false);
 if(firstRun) setTimeout(welcome, 350);
 requestPersistence();
-if("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+if("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).catch(() => {});
 const loadFire = () => import("./fire.js").catch(() => {}); // SVG stays visible if WebGL or loading fails.
 if("requestIdleCallback" in window) requestIdleCallback(loadFire, {timeout:1500});
 else setTimeout(loadFire, 250);
