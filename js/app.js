@@ -992,11 +992,11 @@ let welcomeSheet = null;
 function welcome(){
   welcomeSheet = openSheet({title:"", html:`<div style="text-align:center;padding:4px 4px 0">
     <img src="icons/icon-192.png" alt="" style="width:76px;height:76px;border-radius:20px;box-shadow:var(--shadow-md)">
-    <div class="h1" style="margin-top:16px">Your streak, <em>everywhere</em></div>
-    <p class="muted" style="margin:10px auto 22px;max-width:380px">The dashboard is now a web app: no Xcode, no weekly re-signing. Bring your history across, or start a fresh chain.</p>
-    <label class="btn primary block press" style="height:48px;cursor:pointer">${ic("upload","sm")} Import backup from the old app<input type="file" accept="application/json,.json" id="wIn" hidden></label>
-    <button class="btn ghost block press" id="wFresh" style="height:48px;margin-top:10px">Start fresh</button>
-    <p class="tiny muted" style="margin-top:16px">Look for <b>streak-backup-from-iphone.json</b> in iCloud Drive. Everything stays on this device.</p></div>`});
+    <div class="h1" style="margin-top:16px">Every streak starts with <em>a day.</em></div>
+    <p class="muted" style="margin:10px auto 22px;max-width:380px">Choose Conquered or Defeated, keep a note, and watch your rhythm take shape.</p>
+    <button class="btn primary block press" id="wFresh" style="height:48px">Start my streak</button>
+    <label class="btn ghost block press" style="height:48px;margin-top:10px;cursor:pointer">${ic("upload","sm")} Import a backup<input type="file" accept="application/json,.json" id="wIn" hidden></label>
+    <p class="tiny muted" style="margin-top:16px">Your entries stay on this device. Export a backup to keep or move your history.</p></div>`});
   $("#wIn", welcomeSheet.el).onchange = e => { const f = e.target.files[0]; e.target.value = ""; if(f) importFile(f); };
   $("#wFresh", welcomeSheet.el).onclick = () => { welcomeSheet.close(); save(); openProfile(); };
   welcomeSheet.onClose = () => { welcomeSheet = null; };
