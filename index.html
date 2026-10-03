@@ -30,16 +30,21 @@
 </script>
 </head>
 <body>
-<header class="topbar" id="topbar">
-  <div class="brand"><img src="icons/icon-192.png" alt=""><span class="t" id="brandTitle">Streak</span></div>
+<header class="topbar stage-shift" id="topbar">
+  <button class="todaychip press" id="todayBtn" aria-label="Open Today"></button>
+  <div class="brand"><span class="t" id="brandTitle">Streak</span></div>
   <button class="iconbtn press" id="themeBtn" aria-label="Change appearance"></button>
   <button class="iconbtn press" id="searchBtn" aria-label="Search journal"></button>
   <button class="avatar press" id="avatarBtn" aria-label="Profile and settings"></button>
 </header>
 
-<main class="shell"><div class="wrap" id="view"></div></main>
+<main class="shell stage-shift"><div class="wrap" id="view"></div></main>
 
 <nav class="dock" id="dock" aria-label="Sections"></nav>
+
+<div class="edge-hint" id="edgeHint" aria-hidden="true"></div>
+<div class="drawer-scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Today"></aside>
 
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastAct" class="hidden"></button></div>
 <div class="hlmenu hidden" id="hlMenu" role="toolbar" aria-label="Highlight colour">

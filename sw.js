@@ -1,7 +1,7 @@
 // Offline shell: network first so a new deploy shows on the next open,
 // falling back to the cached copy when offline (or the network is very slow).
-const VERSION = "streak-v1";
-const SHELL = ["./", "index.html", "css/app.css", "js/app.js", "js/logic.js", "js/store.js", "js/quotes.js",
+const VERSION = "streak-v9";
+const SHELL = ["./", "index.html", "css/app.css", "js/app.js", "js/logic.js", "js/store.js", "js/quotes.js", "js/fire.js", "js/vendor/three-fire.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"];
 
 self.addEventListener("install", e => {

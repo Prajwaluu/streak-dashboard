@@ -57,17 +57,24 @@ function stripTags(html){ return String(html).replace(/<br\s*\/?>/gi, "\n").repl
 
 export function statusOf(S, k){ const o = S.days[k]; return o ? (o.status || null) : null; }
 export const isWin = st => st === "full" || st === "partial";
+// Legacy partial wins keep their saved value, but belong to Conquered in the
+// two-outcome interface. Reading a profile never rewrites its history.
+export function outcomeOf(S, k){
+  const st = statusOf(S, k);
+  return isWin(st) ? "full" : st === "missed" ? "missed" : null;
+}
 
 // ================= streak (same rule as the iOS app) =================
 // Today only counts once it's logged; an unlogged today doesn't break the streak.
 export function streak(S, today){
   let n = 0, k = today;
+  if(statusOf(S, today) === "missed") return 0;
   if(!isWin(statusOf(S, today))) k = addDays(k, -1);
   while(isWin(statusOf(S, k))){ n++; k = addDays(k, -1); }
   return n;
 }
-export function longestStreak(S){
-  const keys = Object.keys(S.days).filter(k => isWin(S.days[k].status)).sort();
+export function longestStreak(S, through = null){
+  const keys = Object.keys(S.days).filter(k => (!through || k <= through) && isWin(S.days[k].status)).sort();
   let longest = 0, cur = 0, prev = null;
   for(const k of keys){
     cur = (prev && addDays(prev, 1) === k) ? cur + 1 : 1;
@@ -112,7 +119,7 @@ export function momentum(S, today, offset = 0){
   const stk = offset === 0 ? Math.min(streak(S, today)/14, 1) : 0.5;
   return Math.round(100 * (0.55*w.sr + 0.30*rate + 0.15*stk));
 }
-export function momentumWord(m){ return m >= 80 ? "Peak" : m >= 67 ? "Strong" : m >= 50 ? "Steady" : m >= 34 ? "Building" : "Recovering"; }
+export function momentumWord(m){ return m >= 80 ? "Unstoppable" : m >= 67 ? "In the zone" : m >= 50 ? "In rhythm" : m >= 34 ? "Finding your rhythm" : "Getting started"; }
 
 export function weekRow(S, today){
   const t = fromIso(today);
@@ -133,6 +140,56 @@ export function weekRow(S, today){
 }
 
 // ================= insights =================
+export function periodInsights(S, today, span = 30){
+  span = [7, 30, 90].includes(span) ? span : 30;
+  const start = addDays(today, 1 - span), previousStart = addDays(start, -span);
+  const rows = [], weekdays = Array.from({length:7}, () => ({won:0, logged:0}));
+  const moods = [0,0,0,0,0], months = new Array(12).fill(0);
+  let conquered = 0, defeated = 0, ratingSum = 0, rated = 0, notes = 0;
+  let previousWon = 0, previousLogged = 0, comebackWins = 0, comebackOpportunities = 0;
+  let allTimeLogged = 0, firstDay = null, winRatingSum = 0, winRated = 0, lossRatingSum = 0, lossRated = 0;
+  for(let i = 0; i < span; i++){
+    const k = addDays(start, i), o = S.days[k] || {}, outcome = outcomeOf(S, k);
+    const rating = Number.isFinite(o.rating) && o.rating >= 0 && o.rating <= 10 ? o.rating : null;
+    rows.push({k, outcome, v:rating, note:!!(o.note && o.note.trim())});
+    if(outcome){
+      const w = weekdays[(fromIso(k).getDay() + 6) % 7]; w.logged++;
+      if(outcome === "full"){ conquered++; w.won++; } else defeated++;
+      if(outcomeOf(S, addDays(k, -1)) === "missed"){
+        comebackOpportunities++; if(outcome === "full") comebackWins++;
+      }
+    }
+    if(rating != null){
+      ratingSum += rating; rated++;
+      if(outcome === "full"){ winRatingSum += rating; winRated++; }
+      if(outcome === "missed"){ lossRatingSum += rating; lossRated++; }
+    }
+    if(Number.isInteger(o.mood) && o.mood >= 0 && o.mood < moods.length) moods[o.mood]++;
+    if(o.note && o.note.trim()) notes++;
+  }
+  for(const k of Object.keys(S.days).sort()){
+    if(k > today) continue;
+    const outcome = outcomeOf(S, k);
+    if(outcome){ allTimeLogged++; if(!firstDay) firstDay = k; }
+    if(k >= previousStart && k < start && outcome){ previousLogged++; if(outcome === "full") previousWon++; }
+    if(outcome === "full" && fromIso(k).getFullYear() === fromIso(today).getFullYear()) months[fromIso(k).getMonth()]++;
+  }
+  const logged = conquered + defeated;
+  const rate = logged ? Math.round(conquered / logged * 100) : null;
+  const previousRate = previousLogged ? Math.round(previousWon / previousLogged * 100) : null;
+  // A single Monday is not a reliable pattern. Tied days remain tied.
+  const eligible = weekdays.map((w, i) => ({...w, i, rate:w.logged ? w.won / w.logged : 0})).filter(w => w.logged >= 3 && w.won > 0);
+  const bestRate = eligible.length ? Math.max(...eligible.map(w => w.rate)) : null;
+  const bestDays = eligible.filter(w => w.rate === bestRate).map(w => w.i);
+  return {span, start, today, rows, conquered, defeated, logged, unlogged:span - logged, rate, previousRate,
+    delta:rate != null && previousRate != null ? rate - previousRate : null,
+    avg:rated ? ratingSum / rated : null, rated, notes, weekdays, bestDays, moods,
+    topMood:moods.some(Boolean) ? moods.indexOf(Math.max(...moods)) : null,
+    comebackWins, comebackOpportunities, months, allTimeLogged, firstDay,
+    winAvg:winRated ? winRatingSum / winRated : null, lossAvg:lossRated ? lossRatingSum / lossRated : null,
+    currentStreak:streak(S, today), longest:longestStreak(S, today)};
+}
+
 export function insights(S, today){
   const year = fromIso(today).getFullYear();
   const ratings = [], moods = [0,0,0,0,0];

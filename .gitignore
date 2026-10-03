@@ -4,3 +4,4 @@ migration/
 streak-backup-*.json
 .DS_Store
 node_modules/
+.impeccable/review/
