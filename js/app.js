@@ -440,8 +440,7 @@ function setStatus(k, st, onChange){
   const o = day(k), prev = o.status;
   if(!["full","partial","missed"].includes(st)) return;
   o.status = outcomeOf(S, k) === st ? null : st;
-  const saved = save(); onChange(); renderChrome();
-  if(!saved) return;
+  save(); onChange(); renderChrome();
   const after = streak(S, today);
   const undo = {action:"Undo", fn: () => { day(k).status = prev; save(); onChange(); renderChrome(); }};
   if(after > before && MILESTONES.includes(after)){ celebrate(); toast(`${after}-day milestone. Remarkable.`, undo); }
@@ -787,34 +786,18 @@ function deleteQuote(i){
 
 // ================= sheets =================
 const sheets = [];
-function syncSheetFocus(){
-  const top = sheets.at(-1);
-  $$(".stage-shift,#dock").forEach(el => el.inert = !!top || (!pinned() && drawerOpen));
-  drawer.inert = !!top || (!pinned() && !drawerOpen);
-  sheets.forEach(sheet => { sheet.el.inert = sheet !== top; });
-}
-document.addEventListener("keydown", e => {
-  if(e.key !== "Tab" || !sheets.length) return;
-  const el = sheets.at(-1).el;
-  const controls = $$("button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),summary,a[href],[tabindex='0']", el).filter(node => node.getClientRects().length);
-  const first = controls[0], last = controls.at(-1);
-  if(!el.contains(document.activeElement) || (!e.shiftKey && document.activeElement === last)){ e.preventDefault(); first?.focus(); }
-  else if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last?.focus(); }
-});
 function openSheet({title, html, wide}){
   const z = 60 + sheets.length * 3;
   const scrim = document.createElement("div"); scrim.className = "scrim"; scrim.style.zIndex = z;
   const el = document.createElement("div"); el.className = "sheet"; el.style.zIndex = z + 1;
-  el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", title || "Streak dialog");
+  el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true");
   el.innerHTML = `<div class="grab"></div><div class="sheet-head"><div class="h2">${title || ""}</div><button class="iconbtn press" data-close aria-label="Close">${ic("x")}</button></div><div class="sheet-body">${html || ""}</div>`;
   document.body.append(scrim, el);
   const prevFocus = document.activeElement;
   const api = { el, body: $(".sheet-body", el), onClose: null, setTitle: t => { $(".sheet-head .h2", el).innerHTML = t; },
     close(){
       const i = sheets.indexOf(api); if(i < 0) return; sheets.splice(i, 1);
-      el.inert = true; el.setAttribute("aria-hidden", "true");
       el.classList.remove("in"); scrim.classList.remove("in");
-      syncSheetFocus();
       setTimeout(() => { el.remove(); scrim.remove(); }, 450);
       if(api.onClose) api.onClose();
       if(prevFocus && prevFocus.focus) try{ prevFocus.focus({preventScroll:true}); }catch(e){}
@@ -827,7 +810,7 @@ function openSheet({title, html, wide}){
   el.addEventListener("touchstart", e => { if(el.scrollTop <= 0 && (e.target.closest(".grab,.sheet-head"))) { y0 = e.touches[0].clientY; el.style.transition = "none"; } }, {passive:true});
   el.addEventListener("touchmove", e => { if(y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); el.style.transform = `translateY(${dy}px)`; }, {passive:true});
   el.addEventListener("touchend", () => { if(y0 == null) return; el.style.transition = ""; el.style.transform = ""; if(dy > 110) api.close(); y0 = null; dy = 0; });
-  sheets.push(api); syncSheetFocus();
+  sheets.push(api);
   requestAnimationFrame(() => { scrim.classList.add("in"); el.classList.add("in"); });
   setTimeout(() => { const f = $("input,textarea", api.body); if(f && window.innerWidth > 700) f.focus(); else $("[data-close]", el).focus({preventScroll:true}); }, 60);
   return api;
@@ -955,13 +938,15 @@ function openProfile(after){
     const name = $("#pName", sh.el).value.trim(), email = $("#pMail", sh.el).value.trim().toLowerCase();
     if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("That email doesn’t look right");
     const nk = keyFor(email);
-    const candidate = normalize({...((nk !== KEY ? loadProfile(nk) : null) || S), name, email, photo});
-    if(!save()) return;
-    try{ applyBackup({profiles:{[nk]:candidate}, current:email}); }
-    catch(error){ return toast(error.message); }
-    KEY = nk; S = candidate;
-    sh.close(); refresh(); if(after) after();
-    toast("Profile saved");
+    if(nk !== KEY){
+      persist(KEY, S); KEY = nk;
+      const existing = hasProfile(KEY) ? loadProfile(KEY) : null;
+      if(existing) S = existing; // returning profile
+    }
+    if(name) S.name = name;
+    S.email = email; S.photo = photo;
+    setCurrentEmail(email); save(); sh.close(); refresh(); if(after) after();
+    toast(email ? "Signed in as " + email : "Profile saved");
   };
 }
 
@@ -1013,7 +998,7 @@ function openCrop(img, target, done){
 // ================= backup, import, restore =================
 async function exportBackup(){
   persist(KEY, S);
-  const data = buildBackup(KEY, S);
+  const data = buildBackup();
   const name = "streak-backup-" + today + ".json";
   const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
   let shared = false;
@@ -1045,14 +1030,8 @@ function importFile(file, after){
       ${mine.logged ? `<div class="risk" style="margin:0 0 14px">${ic("alert","sm")}<span>This replaces the ${mine.logged} days currently on this device. A restore point of them is saved first.</span></div>` : ""}
       <button class="btn primary block press" id="iGo">${ic("upload","sm")} Import ${Object.keys(parsed.profiles).length > 1 ? Object.keys(parsed.profiles).length + " profiles" : "everything"}</button>`});
     $("#iGo", sh.el).onclick = async () => {
-      const button = $("#iGo", sh.el); button.disabled = true;
-      try{
-        for(const key of Object.keys(parsed.profiles)){
-          const existing = key === KEY ? S : loadProfile(key);
-          if(existing && !await dailySnapshot(key, existing, "before-import-" + Date.now())) throw new Error("Couldn't save a restore point. Your data hasn't been replaced. Export a backup and try again.");
-        }
-        applyBackup(parsed);
-      }catch(error){ button.disabled = false; return toast(error.message); }
+      if(mine.logged) await dailySnapshot(KEY, S, "before-import-" + Date.now());
+      applyBackup(parsed);
       KEY = keyFor(currentEmail());
       S = loadProfile(KEY) || blankState();
       save(); selected = today; viewYear = fromIso(today).getFullYear();
@@ -1061,7 +1040,6 @@ function importFile(file, after){
       toast(`Welcome back — ${sm.logged} days restored`);
     };
   };
-  r.onerror = () => toast("Couldn’t read that file. Choose it again.");
   r.readAsText(file);
 }
 async function openRestore(after){
@@ -1073,10 +1051,8 @@ async function openRestore(after){
   sh.body.addEventListener("click", async e => {
     const b = e.target.closest("[data-s]"); if(!b) return;
     const snap = snaps[+b.dataset.s], prev = S;
-    if(!await dailySnapshot(KEY, S, "before-restore-" + Date.now())) return toast("Couldn't save a restore point. Export a backup before trying again.");
-    S = snapshotState(snap);
-    if(!save()){ S = prev; return; }
-    sh.close(); if(after) after(); refresh();
+    await dailySnapshot(KEY, S, "before-restore-" + Date.now());
+    S = snapshotState(snap); save(); sh.close(); if(after) after(); refresh();
     toast("Restored", {action:"Undo", fn: () => { S = prev; save(); refresh(); }});
   });
 }
@@ -1163,11 +1139,7 @@ function rollover(){
 }
 setInterval(rollover, 30000);
 document.addEventListener("visibilitychange", () => { if(!document.hidden) rollover(); });
-window.addEventListener("storage", e => {
-  if(e.key === KEY && e.newValue){
-    try{ S = normalize(JSON.parse(e.newValue)); refresh(); }catch(error){ toast("Couldn't read changes from another tab. Export a backup and reload."); }
-  }
-});
+window.addEventListener("storage", e => { if(e.key === KEY && e.newValue){ S = normalize(JSON.parse(e.newValue)); refresh(); } });
 
 ensureDailyRecall();
 if(!firstRun) save();
