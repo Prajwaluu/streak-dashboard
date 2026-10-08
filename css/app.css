@@ -1007,3 +1007,67 @@ html.daily-open{overflow:hidden}
 .fire-ready>.fire-fallback{opacity:0}
 [data-fire="0"]>.fire-fallback{color:var(--text-2);filter:none;opacity:.65}
 @media(prefers-reduced-motion:reduce){.chip-flame>canvas,.streak-flame>canvas{transition:none}}
+
+/* Insights: the outcome palette carries the story, from days to milestones. */
+.insights-page{--ins-secondary:color-mix(in srgb,var(--text-2) 85%,var(--text))}
+.insights-page .rhythm-panel{background:color-mix(in srgb,var(--accent) 5%,var(--surface));border-radius:16px}
+.outcome-totals>div{position:relative;padding:18px;background:var(--surface);border-radius:12px}
+.outcome-totals .outcome-mark{position:absolute;right:14px;top:16px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%}
+.conquered-total .outcome-mark{background:var(--win-soft);color:var(--win)}
+.tempered-total .outcome-mark{background:var(--part-soft);color:color-mix(in srgb,var(--part) 65%,var(--text))}
+.defeated-total .outcome-mark{background:var(--miss-soft);color:var(--miss)}
+.outcome-totals>div>span:not(.outcome-mark){color:var(--ins-secondary)}
+.outcome-ribbon{display:flex;gap:3px;height:8px;border-radius:4px;overflow:hidden;margin:8px 0 14px}
+.outcome-ribbon i{min-width:0;background:var(--surface-3)}
+.outcome-ribbon .full{background:var(--win)}
+.outcome-ribbon .partial{background:var(--part)}
+.outcome-ribbon .missed{background:var(--miss)}
+.rhythm-day{padding-bottom:17px;height:80px}
+.rhythm-day.has-note::after{bottom:22px}
+.rhythm-date{position:absolute;bottom:0;font-size:9px;line-height:12px;color:var(--ins-secondary);font-variant-numeric:tabular-nums}
+.rhythm-day.is-today .rhythm-date{color:var(--accent);font-weight:700}
+.rhythm-day.is-today{box-shadow:inset 0 -2px var(--accent)}
+.insights-page .pattern-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:var(--accent-soft);border-radius:12px;margin-bottom:16px}
+.weekday-track{height:86px;max-width:30px;background:var(--surface-3)}
+.weekday-track i{background:color-mix(in srgb,var(--accent) 72%,var(--surface))}
+.comeback-panel{background:color-mix(in srgb,var(--win) 8%,var(--surface))}
+.comeback-panel .pattern-icon{background:var(--win-soft);color:var(--win)}
+.comeback-visual{margin:30px 0}
+.comeback-dot{width:48px;height:48px}
+.comeback-dot.win{background:var(--win);color:var(--on-accent)}
+.comeback-dot.next{background:var(--surface)}
+.comeback-line{border-top:1px solid color-mix(in srgb,var(--win) 35%,var(--border-strong))}
+.rating-section{padding:26px;background:var(--surface);border-radius:16px;border-top:none}
+.insights-page .rating-section .chart{padding:8px 0 0;border-radius:0}
+.ratings-empty{background:var(--surface-2)}
+.emotional-section,.year-section{padding:24px;border-top:none;background:var(--surface);border-radius:16px}
+.mood-distribution>div{padding:9px 10px;background:var(--surface-2);border-radius:10px;gap:10px}
+.mood-distribution{gap:7px}
+.mood-distribution>div>div{height:8px}
+.month-pattern{grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 10px}
+.month-pattern>div{display:flex;flex-direction:column;gap:8px;font-size:10px}
+.month-pattern>div>span{order:3}
+.month-pattern>div>b{order:1;font-size:12px}
+.month-pattern>div>div{order:2;display:flex;align-items:flex-end;width:100%;max-width:28px;height:70px;background:var(--surface-2);border-radius:5px}
+.month-pattern i{width:100%;background:color-mix(in srgb,var(--win) 72%,var(--surface))}
+.month-pattern .current i{background:var(--win)}
+.month-pattern .current>span{color:var(--win);font-weight:700}
+.month-pattern .upcoming>div{background:transparent;border:1px dashed var(--border-strong)}
+.milestone-section{padding:26px;background:color-mix(in srgb,var(--part) 8%,var(--surface));border-radius:16px;border-top:none}
+.milestone-progress{height:7px;border-radius:7px;background:var(--surface-3);overflow:hidden}
+.milestone-progress>span{display:block;height:100%;background:var(--ember);border-radius:7px}
+.milestone-progress-caption{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--ins-secondary);margin:10px 0 28px}
+.insights-close{margin-bottom:0}
+@media(max-width:600px){
+  .outcome-totals>div{padding:14px 10px}
+  .outcome-totals .outcome-mark{position:static;width:25px;height:25px;margin:0 0 9px}
+  .outcome-totals b{font-size:38px}
+  .outcome-totals{gap:8px}
+  .rhythm-day{height:60px}
+  .weekday-track{height:76px}
+  .rating-section,.emotional-section,.year-section,.milestone-section{padding:21px 18px}
+  .insights-page .rating-section .chart{padding:0}
+  .comeback-visual{margin:24px 0}
+  .mood-distribution>div{grid-template-columns:24px 56px 1fr 20px;gap:8px}
+  .month-pattern{gap:16px 10px}
+}

@@ -6,7 +6,7 @@ Static files only: no build step and no dependencies. Data stays in the browser'
 
 ## Use and share
 
-Open [Streak](https://prajwaluu.github.io/streak-dashboard/) and share that same link with anyone. Each device keeps its own entries; there is no automatic cloud sync.
+Open [Streak](https://prajwaluu.github.io/streak-dashboard/) and share that same link with anyone. No account, approval, or installation is required. Each device keeps its own entries; there is no automatic cloud sync. Use **Settings → Share Streak** to send the link through your phone’s share sheet or copy it. New users can start logging immediately and add an optional profile later.
 
 - **iPhone:** open in Safari, then Share → Add to Home Screen. Enable Open as Web App if offered.
 - **Android:** open in Chrome, then its menu → Install and create shortcut → Install (the wording can vary by Chrome version).
@@ -44,6 +44,6 @@ The tests run the old app's streak, year-stats and momentum code next to the new
 
 Today offers **Conquered**, **Tempered**, and **Defeated**, with optional rating and mood details and one daily notes field. Tempered is the middle ground: a balanced day that keeps the flame alive. Conquered and Tempered both continue a streak; Defeated ends it. An unlogged today leaves yesterday’s streak available. Legacy partial days now display as Tempered, using their original saved values.
 
-Insights offers 7-, 30-, and 90-day views with separate counts for all three outcomes. Conquest rates count only Conquered days out of all explicitly logged outcomes; Tempered days keep streaks alive without inflating conquest counts. Unlogged days stay separate, and weekday patterns require at least three observations. Tap the day timeline to revisit an entry. A comeback is a Conquered day immediately after a Defeated day. Keyboard shortcuts are 1 for Conquered, 2 for Tempered, and 3 for Defeated.
+Insights offers 7-, 30-, and 90-day views with separate counts for all three outcomes. Conquest rates count only Conquered days out of all explicitly logged outcomes; Tempered days keep streaks alive without inflating conquest counts. Unlogged days stay separate, and weekday patterns require at least three observations. The outcome ribbon shows the full period, and dated day bars let you revisit an entry. Ratings include a shaded chart, monthly totals use columns, and the next milestone shows progress from the current streak. A comeback is a Conquered day immediately after a Defeated day. Keyboard shortcuts are 1 for Conquered, 2 for Tempered, and 3 for Defeated.
 
 The flame uses a locally bundled **Three.js 0.186.1** shader with a moving flame silhouette, flowing heat, a pulsing orange glow and rising embers. One 192×192 WebGL scene serves both display canvases at up to 30fps. It stops when hidden, offscreen or inactive, renders a still flame for reduced motion, and keeps the SVG fallback when WebGL is unavailable. The Three.js bundle and flame are cached for offline use; its MIT license is in `js/vendor/THREE-LICENSE.txt`.

@@ -41,6 +41,7 @@ const P = {
   alert:'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
   info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
   mail:'<rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="m22 7-10 5L2 7"/>',
+  share:'<path d="M12 16V3m-4 4 4-4 4 4M5 10v10h14V10"/>',
   phone:'<rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M12 18h.01"/>',
   edit:'<path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   bookmark:'<path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
@@ -611,7 +612,7 @@ function lineChart(points){
   if(current.length) segments.push(current);
   const grid = [0,5,10].map(v => `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--border)" stroke-dasharray="3 5"/><text class="axis" x="${L-9}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("");
   const labels = [0, Math.floor((points.length - 1)/2), points.length - 1].map((i, j) => `<text class="axis" x="${x(i)}" y="${H-5}" text-anchor="${j === 0 ? "start" : j === 2 ? "end" : "middle"}">${esc(niceDate(points[i].k, {day:"numeric", month:"short"}))}</text>`).join("");
-  const paths = segments.map(seg => `<path d="${seg.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>` + seg.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"><title>${esc(niceDate(p[2].k))}: ${p[2].v}/10</title></circle>`).join("")).join("");
+  const paths = segments.map(seg => (seg.length > 1 ? `<path d="M${seg[0][0].toFixed(1)},${y(0)} ${seg.map(p => "L" + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")} L${seg.at(-1)[0].toFixed(1)},${y(0)} Z" fill="var(--accent-soft)"/>` : "") + `<path d="${seg.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>` + seg.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"><title>${esc(niceDate(p[2].k))}: ${p[2].v}/10</title></circle>`).join("")).join("");
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Day ratings over the last ${points.length} days; gaps are days without a rating">${grid}${labels}${paths}</svg>`;
 }
 function insightsView(){
@@ -621,7 +622,7 @@ function insightsView(){
   const weekdayNames = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
   const tone = !I.logged ? "A first day changes the picture." : I.currentStreak >= 7 ? "Look at you showing up." : I.delta != null && I.delta > 0 ? "You’re finding your stride." : I.currentStreak > 0 ? "Small wins. Real momentum." : I.conquered ? "Your next chapter starts today." : "There’s room for a comeback.";
   const compare = I.delta == null ? "Your next period will give you a comparison." : I.delta === 0 ? `The same conquest rate as the previous ${I.span} days.` : `${Math.abs(I.delta)} percentage points ${I.delta > 0 ? "higher" : "lower"} than the previous ${I.span} days.`;
-  const timeline = I.rows.map(p => `<button class="rhythm-day ${p.outcome || "unlogged"} ${p.k === today ? "is-today" : ""} ${p.note ? "has-note" : ""}" data-insight-day="${p.k}" aria-label="${esc(niceDate(p.k))}, ${p.outcome ? STATUS[p.outcome][0] : "Not logged"}${p.v != null ? ", rating " + p.v + " out of 10" : ""}${p.note ? ", has a note" : ""}" title="${esc(niceDate(p.k, {day:"numeric", month:"short"}))} · ${p.outcome ? STATUS[p.outcome][0] : "Not logged"}"><i></i></button>`).join("");
+  const timeline = I.rows.map(p => `<button class="rhythm-day ${p.outcome || "unlogged"} ${p.k === today ? "is-today" : ""} ${p.note ? "has-note" : ""}" data-insight-day="${p.k}" aria-label="${esc(niceDate(p.k))}, ${p.outcome ? STATUS[p.outcome][0] : "Not logged"}${p.v != null ? ", rating " + p.v + " out of 10" : ""}${p.note ? ", has a note" : ""}" title="${esc(niceDate(p.k, {day:"numeric", month:"short"}))} · ${p.outcome ? STATUS[p.outcome][0] : "Not logged"}"><i></i><span class="rhythm-date" aria-hidden="true">${fromIso(p.k).getDate()}</span></button>`).join("");
   const best = I.bestDays.length === 1 ? I.bestDays[0] : null;
   const strongestTitle = best != null ? `${weekdayNames[best]} is your day.` : I.bestDays.length ? "You have a few strong days." : "Your rhythm is taking shape.";
   const strongestText = best != null ? `${I.weekdays[best].won} of ${I.weekdays[best].logged} logged ${weekdayNames[best]}s conquered.` : I.bestDays.length ? `${I.bestDays.length} weekdays share your highest conquest rate of ${Math.round(I.weekdays[I.bestDays[0]].won / I.weekdays[I.bestDays[0]].logged * 100)}%.` : "Log at least three of a weekday to start spotting a pattern.";
@@ -638,7 +639,8 @@ function insightsView(){
     </header>
     <section class="rhythm-panel" aria-labelledby="rhythm-heading">
       <div class="rhythm-top"><h2 id="rhythm-heading">${tone}</h2><span>${dateRange}</span></div>
-      <div class="outcome-totals"><div class="conquered-total"><b class="num">${I.conquered}</b><span>Conquered</span></div><div class="tempered-total"><b class="num">${I.tempered}</b><span>Tempered</span></div><div class="defeated-total"><b class="num">${I.defeated}</b><span>Defeated</span></div><p>${I.logged ? `<strong>${I.rate}%</strong> of logged days conquered` : "A blank page. A fresh beginning."}</p></div>
+      <div class="outcome-totals"><div class="conquered-total"><span class="outcome-mark">${ic("check","sm")}</span><b class="num">${I.conquered}</b><span>Conquered</span></div><div class="tempered-total"><span class="outcome-mark">${ic("balance","sm")}</span><b class="num">${I.tempered}</b><span>Tempered</span></div><div class="defeated-total"><span class="outcome-mark">${ic("return","sm")}</span><b class="num">${I.defeated}</b><span>Defeated</span></div><p>${I.logged ? `<strong>${I.rate}%</strong> of logged days conquered` : "A blank page. A fresh beginning."}</p></div>
+      <div class="outcome-ribbon" aria-hidden="true">${[["full",I.conquered],["partial",I.tempered],["missed",I.defeated],["unlogged",I.unlogged]].filter(([,n]) => n).map(([c,n]) => `<i class="${c}" style="flex:${n}"></i>`).join("")}</div>
       <div class="rhythm-timeline" style="--rhythm-columns:${Math.min(I.span,30)}" role="group" aria-label="Daily outcomes over the last ${I.span} days">${timeline}</div>
       <div class="rhythm-caption"><span>${I.unlogged} not logged <i>·</i> Tap a day to revisit</span><span>${I.logged}/${I.span} days logged</span></div>
       <div class="period-comparison ${I.delta != null && I.delta > 0 ? "improving" : ""}">${ic(I.delta != null && I.delta > 0 ? "chart" : "history","sm")}<span>${compare}</span></div>
@@ -658,14 +660,15 @@ function insightsView(){
       ${I.rated ? `<div class="chart">${lineChart(I.rows)}</div><div class="rating-accessible"><details><summary>Read day ratings</summary><ul>${I.rows.filter(p => p.v != null).map(p => `<li>${esc(niceDate(p.k, {day:"numeric", month:"short"}))}: ${p.v}/10</li>`).join("")}</ul></details></div>` : `<div class="ratings-empty"><span>${ic("chart")}</span><p>Open a day and add a rating.<br>Even a few days can reveal a change.</p><button class="chip press" data-act="opentoday">Rate today ${ic("chevR","xs")}</button></div>`}
     </section>
     <div class="insight-duo">
-      <section class="insight-section"><div class="insight-section-head"><div><h2>Your emotional weather</h2><p>${I.topMood != null ? `${topMoods.join(" and ")} ${topMoods.length > 1 ? "are" : "is"} your most logged mood${topMoods.length > 1 ? "s" : ""} this period.` : "A mood check-in adds another layer."}</p></div></div>
+      <section class="insight-section emotional-section"><div class="insight-section-head"><div><h2>Your emotional weather</h2><p>${I.topMood != null ? `${topMoods.join(" and ")} ${topMoods.length > 1 ? "are" : "is"} your most logged mood${topMoods.length > 1 ? "s" : ""} this period.` : "A mood check-in adds another layer."}</p></div></div>
         <div class="mood-distribution">${MOODS.map(([e,t],i) => `<div><span class="mood-symbol" aria-hidden="true">${e}</span><span>${t}</span><div><i style="width:${I.moods[i]/Math.max(1,...I.moods)*100}%" class="${I.topMood != null && I.moods[i] === I.moods[I.topMood] ? "leading" : ""}"></i></div><b class="num">${I.moods[i]}</b></div>`).join("")}</div>
       </section>
-      <section class="insight-section"><div class="insight-section-head"><div><h2>A year of showing up</h2><p>Conquered days by month · ${fromIso(today).getFullYear()}</p></div></div>
-        <div class="month-pattern">${I.months.map((n,i) => `<div aria-label="${MONTHS[i]}: ${i > currentMonth ? "upcoming" : n + " conquered days"}"><span>${MONTHS[i].slice(0,3)}</span><div><i style="width:${n/monthsMax*100}%"></i></div><b class="num">${i > currentMonth ? "—" : n}</b></div>`).join("")}</div>
+      <section class="insight-section year-section"><div class="insight-section-head"><div><h2>A year of showing up</h2><p>Conquered days by month · ${fromIso(today).getFullYear()}</p></div></div>
+        <div class="month-pattern">${I.months.map((n,i) => `<div class="${i === currentMonth ? "current" : i > currentMonth ? "upcoming" : ""}" aria-label="${MONTHS[i]}: ${i > currentMonth ? "upcoming" : n + " conquered days"}"><span>${MONTHS[i].slice(0,3)}</span><div><i style="height:${n/monthsMax*100}%"></i></div><b class="num">${i > currentMonth ? "—" : n}</b></div>`).join("")}</div>
       </section>
     </div>
     <section class="milestone-section"><div class="insight-section-head"><div><h2>The next little mountain</h2><p>${nx - I.currentStreak} more days keeping the flame alive to reach ${nx}. Conquered and Tempered both count.</p></div>${ic("flag")}</div>
+      <div class="milestone-progress" role="progressbar" aria-label="Current streak toward the next milestone" aria-valuemin="0" aria-valuemax="${nx}" aria-valuenow="${I.currentStreak}"><span style="width:${I.currentStreak / nx * 100}%"></span></div><div class="milestone-progress-caption"><span>${I.currentStreak} days kept alive</span><span>${nx}-day milestone</span></div>
       <div class="milestone-path">${displayedMilestones.map(m => `<div class="${m <= I.longest ? "earned" : m === nextUnearned ? "up-next" : ""}"><span>${m <= I.longest ? ic("check","xs") : ic("flag","xs")}</span><b class="num">${m}<small> days</small></b><p>${m <= I.longest ? "Earned" : m === nextUnearned ? "Next to earn" : "Ahead"}</p></div>`).join("")}</div>
       <p class="insights-close">A day is a page. You’re still writing.</p>
     </section>
@@ -811,6 +814,15 @@ function openChapters(bi){
 }
 
 // ================= settings / profile =================
+const PUBLIC_APP_URL = "https://prajwaluu.github.io/streak-dashboard/";
+async function shareStreak(){
+  if(navigator.share){
+    try{ await navigator.share({title:"Streak", text:"A private daily journal for your wins, balance, and fresh starts.", url:PUBLIC_APP_URL}); return; }
+    catch(err){ if(err.name === "AbortError") return; }
+  }
+  try{ await navigator.clipboard.writeText(PUBLIC_APP_URL); toast("Streak link copied — ready to send"); }
+  catch(err){ openSheet({title:"Share Streak", html:`<p class="muted" style="margin-bottom:16px">Copy this link and send it to anyone. Their journal stays on their own device.</p><input class="input" readonly aria-label="Public Streak link" value="${PUBLIC_APP_URL}" onclick="this.select()">`}); }
+}
 function isStandalone(){ return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }
 async function openSettings(){
   const sh = openSheet({title:"Settings", html:""});
@@ -836,7 +848,8 @@ async function openSettings(){
         <label class="li press" style="cursor:pointer"><span class="ic">${ic("upload","sm")}</span><span class="tx">Import backup<small>From the old iPhone app or another device</small></span>${ic("chevR","sm chev")}<input type="file" accept="application/json,.json" id="sImport" hidden></label>
         <button class="li press" id="sRestore"><span class="ic">${ic("history","sm")}</span><span class="tx">Restore points<small>Automatic daily snapshots, last 14 kept</small></span>${ic("chevR","sm chev")}</button>
       </div>
-      ${!isStandalone() ? `<div class="sec-label">Install</div><div class="list"><div class="li"><span class="ic">${ic("phone","sm")}</span><span class="tx">Add to Home Screen<small>In Safari tap Share → Add to Home Screen. It opens full-screen, works offline, and never needs re-signing.</small></span></div></div>` : ""}
+      <div class="sec-label">Share with friends &amp; family</div><div class="list"><button class="li press" id="sShare"><span class="ic">${ic("share","sm")}</span><span class="tx">Share Streak<small>Anyone can open it. Each person gets their own journal.</small></span>${ic("chevR","sm chev")}</button></div>
+      ${!isStandalone() ? `<div class="sec-label">Install</div><div class="list"><div class="li"><span class="ic">${ic("phone","sm")}</span><span class="tx">Add to Home Screen<small>iPhone: Safari → Share → Add to Home Screen. Android: Chrome menu → Add to Home screen or Install app. Installation is optional; you can use Streak in your browser.</small></span></div></div>` : ""}
       <div class="sec-label">Gestures &amp; keys</div>
       <div class="list" style="margin-bottom:10px"><div class="li"><span class="ic">${ic("flame","sm")}</span><span class="tx">Today panel<small>Swipe in from the left edge, or tap the flame in the top bar</small></span></div></div>
       <div class="list"><div class="li"><span class="ic">${ic("key","sm")}</span><span class="tx small"><span class="kbd">1</span> Conquered · <span class="kbd">2</span> Tempered · <span class="kbd">3</span> Defeated · <span class="kbd">←</span> <span class="kbd">→</span> day · <span class="kbd">T</span> today · <span class="kbd">/</span> search · <span class="kbd">C</span> <span class="kbd">I</span> <span class="kbd">J</span> views</span></div></div>
@@ -846,6 +859,7 @@ async function openSettings(){
     $$("[data-bgin]", sh.el).forEach(inp => inp.onchange = () => { const f = inp.files[0]; inp.value = ""; if(f) readImage(f, img => openCrop(img, inp.dataset.bgin, url => { if(inp.dataset.bgin === "quote") S.quoteBg = url; else S.recallBg = url; save(); render(); draw(); })); });
     $$("[data-bgclear]", sh.el).forEach(b => b.onclick = () => { if(b.dataset.bgclear === "quote") S.quoteBg = null; else S.recallBg = null; save(); render(); draw(); });
     $$("[data-fit]", sh.el).forEach(s => s.onchange = () => { if(s.dataset.fit === "quote") S.quoteBgFit = s.value; else S.recallBgFit = s.value; save(); render(); });
+    $("#sShare", sh.el).onclick = shareStreak;
     $("#sExport", sh.el).onclick = async () => { await exportBackup(); draw(); };
     $("#sImport", sh.el).onchange = e => { const f = e.target.files[0]; e.target.value = ""; if(f) importFile(f, () => sh.close()); };
     $("#sRestore", sh.el).onclick = () => openRestore(() => sh.close());
@@ -1002,7 +1016,7 @@ function welcome(){
     <label class="btn ghost block press" style="height:48px;margin-top:10px;cursor:pointer">${ic("upload","sm")} Import a backup<input type="file" accept="application/json,.json" id="wIn" hidden></label>
     <p class="tiny muted" style="margin-top:16px">Your entries stay on this device. Export a backup to keep or move your history.</p></div>`});
   $("#wIn", welcomeSheet.el).onchange = e => { const f = e.target.files[0]; e.target.value = ""; if(f) importFile(f); };
-  $("#wFresh", welcomeSheet.el).onclick = () => { welcomeSheet.close(); save(); openProfile(); };
+  $("#wFresh", welcomeSheet.el).onclick = () => { welcomeSheet.close(); save(); openDrawer(today); };
   welcomeSheet.onClose = () => { welcomeSheet = null; };
 }
 
