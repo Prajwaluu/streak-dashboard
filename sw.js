@@ -1,7 +1,7 @@
 // Offline shell: network first so a new deploy shows on the next open,
 // falling back to the cached copy when offline (or the network is very slow).
-const VERSION = "streak-v15";
-const SHELL = ["./", "index.html", "css/app.css", "js/app.js", "js/logic.js", "js/store.js", "js/quotes.js", "js/fire.js", "js/vendor/three-fire.js",
+const VERSION = "streak-v16";
+const SHELL = ["./", "index.html", "css/app.css", "js/app.js", "js/calendar-export.js", "js/logic.js", "js/store.js", "js/quotes.js", "js/fire.js", "js/vendor/three-fire.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"];
 
 self.addEventListener("install", e => {
@@ -9,7 +9,7 @@ self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(freshShell)).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("streak-v") && k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", e => {
   const req = e.request;

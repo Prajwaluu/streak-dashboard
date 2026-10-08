@@ -1068,3 +1068,7 @@ html.daily-open{overflow:hidden}
   .mood-distribution>div{grid-template-columns:24px 56px 1fr 20px;gap:8px}
   .month-pattern{gap:16px 10px}
 }
+.year-export-preview img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--border)}
+.year-export-actions{flex-wrap:wrap;gap:10px}
+.year-export-actions .btn{flex:1;min-height:44px}
+.year-export-actions [hidden]{display:none}

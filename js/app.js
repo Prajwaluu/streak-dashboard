@@ -1,4 +1,5 @@
 import { QUOTES } from "./quotes.js";
+import { renderYearCalendar } from "./calendar-export.js";
 import {
   MONTHS, MOODS, MILESTONES, iso, fromIso, addDays, blankState, normalize, statusOf, isWin, outcomeOf, periodInsights,
   streak, longestStreak, nextMilestone, prevMilestone,
@@ -439,7 +440,8 @@ function setStatus(k, st, onChange){
   const o = day(k), prev = o.status;
   if(!["full","partial","missed"].includes(st)) return;
   o.status = outcomeOf(S, k) === st ? null : st;
-  save(); onChange(); renderChrome();
+  const saved = save(); onChange(); renderChrome();
+  if(!saved) return;
   const after = streak(S, today);
   const undo = {action:"Undo", fn: () => { day(k).status = prev; save(); onChange(); renderChrome(); }};
   if(after > before && MILESTONES.includes(after)){ celebrate(); toast(`${after}-day milestone. Remarkable.`, undo); }
@@ -576,6 +578,7 @@ function calendarView(){
         ${viewYear !== curY ? `<button class="chip press" data-yr="0">This year</button>` : ""}</div>
       <span class="spacer"></span>
       <div class="seg" role="group" aria-label="Colour days by">${[["status","Status"],["rating","Rating"],["mood","Mood"]].map(([v, l]) => `<button class="${mode === v ? "on" : ""}" data-mode="${v}">${l}</button>`).join("")}</div>
+      <button class="chip press" data-calendar-export>${ic("download", "sm")} Export year</button>
     </div>
     <div class="legend" style="margin:-4px 2px 14px">${legend}<span class="muted">· dot = has a note</span></div>
     <div class="months">${months}</div></div>`;
@@ -585,8 +588,58 @@ function bindCalendar(el){
     const t = e.target.closest("button"); if(!t) return;
     if(t.dataset.yr != null){ const d = +t.dataset.yr; viewYear = d === 0 ? fromIso(today).getFullYear() : viewYear + d; return render(); }
     if(t.dataset.mode){ S.calendarMode = t.dataset.mode; save(); return render(); }
+    if(t.hasAttribute("data-calendar-export")) return openYearExport();
     if(t.dataset.day) openDrawer(t.dataset.day);
   });
+}
+function openYearExport(){
+  const year = viewYear, mode = S.calendarMode;
+  const modeLabel = {status:"Status", rating:"Rating", mood:"Mood"}[mode] || "Status";
+  const sh = openSheet({title:`Export ${year}`, html:`<div class="stack">
+    <p class="muted">All twelve months · ${modeLabel} · 2160 × 2700 PNG</p>
+    <div class="year-export-preview" aria-live="polite"><p class="muted">Preparing your image…</p></div>
+    <div class="row year-export-actions"><button class="btn primary press" data-save-year disabled>${ic("download","sm")} Save image</button><button class="btn press" data-share-year hidden disabled>${ic("share","sm")} Share image</button></div>
+    <p class="tiny muted">The image includes your daily colours and outcome totals. Names, email addresses, photos and journal notes stay out of it. Save it for your history or share it on social media.</p>
+    <p class="tiny muted" data-export-message role="status"></p></div>`});
+  let closed = false, previewUrl = null;
+  sh.onClose = () => { closed = true; if(previewUrl) URL.revokeObjectURL(previewUrl); };
+  const message = $("[data-export-message]", sh.body);
+  const failed = () => {
+    $(".year-export-preview", sh.body).textContent = "Image unavailable";
+    message.textContent = "Your browser couldn’t create the image. Please try again or use another browser.";
+  };
+  try{
+    const canvas = renderYearCalendar(S, {year, today, mode, theme:S.theme});
+    canvas.toBlob(blob => {
+      if(closed) return;
+      if(!blob){ failed(); return; }
+      previewUrl = URL.createObjectURL(blob);
+      const img = document.createElement("img");
+      img.src = previewUrl; img.width = canvas.width; img.height = canvas.height;
+      img.alt = `${year} calendar image with all twelve months coloured by ${modeLabel.toLowerCase()}`;
+      $(".year-export-preview", sh.body).replaceChildren(img);
+      const filename = `my-year-${year}-${mode}.png`;
+      const saveButton = $("[data-save-year]", sh.body);
+      saveButton.disabled = false;
+      saveButton.onclick = () => {
+        const url = URL.createObjectURL(blob), a = document.createElement("a");
+        a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        message.textContent = "Image downloaded. On a phone, you can find it in Files or Downloads and save it to Photos.";
+      };
+      if(typeof File === "function" && navigator.share && navigator.canShare){
+        const file = new File([blob], filename, {type:"image/png"});
+        if(navigator.canShare({files:[file]})){
+          const shareButton = $("[data-share-year]", sh.body);
+          shareButton.hidden = false; shareButton.disabled = false;
+          shareButton.onclick = async () => {
+            try{ await navigator.share({files:[file]}); }
+            catch(err){ if(err.name !== "AbortError") message.textContent = "Sharing isn’t available right now. Use Save image, then share the saved photo."; }
+          };
+        }
+      }
+    }, "image/png");
+  }catch(err){ failed(); }
 }
 function openDay(k){
   selected = k;
@@ -734,18 +787,34 @@ function deleteQuote(i){
 
 // ================= sheets =================
 const sheets = [];
+function syncSheetFocus(){
+  const top = sheets.at(-1);
+  $$(".stage-shift,#dock").forEach(el => el.inert = !!top || (!pinned() && drawerOpen));
+  drawer.inert = !!top || (!pinned() && !drawerOpen);
+  sheets.forEach(sheet => { sheet.el.inert = sheet !== top; });
+}
+document.addEventListener("keydown", e => {
+  if(e.key !== "Tab" || !sheets.length) return;
+  const el = sheets.at(-1).el;
+  const controls = $$("button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),summary,a[href],[tabindex='0']", el).filter(node => node.getClientRects().length);
+  const first = controls[0], last = controls.at(-1);
+  if(!el.contains(document.activeElement) || (!e.shiftKey && document.activeElement === last)){ e.preventDefault(); first?.focus(); }
+  else if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last?.focus(); }
+});
 function openSheet({title, html, wide}){
   const z = 60 + sheets.length * 3;
   const scrim = document.createElement("div"); scrim.className = "scrim"; scrim.style.zIndex = z;
   const el = document.createElement("div"); el.className = "sheet"; el.style.zIndex = z + 1;
-  el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true");
+  el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", title || "Streak dialog");
   el.innerHTML = `<div class="grab"></div><div class="sheet-head"><div class="h2">${title || ""}</div><button class="iconbtn press" data-close aria-label="Close">${ic("x")}</button></div><div class="sheet-body">${html || ""}</div>`;
   document.body.append(scrim, el);
   const prevFocus = document.activeElement;
   const api = { el, body: $(".sheet-body", el), onClose: null, setTitle: t => { $(".sheet-head .h2", el).innerHTML = t; },
     close(){
       const i = sheets.indexOf(api); if(i < 0) return; sheets.splice(i, 1);
+      el.inert = true; el.setAttribute("aria-hidden", "true");
       el.classList.remove("in"); scrim.classList.remove("in");
+      syncSheetFocus();
       setTimeout(() => { el.remove(); scrim.remove(); }, 450);
       if(api.onClose) api.onClose();
       if(prevFocus && prevFocus.focus) try{ prevFocus.focus({preventScroll:true}); }catch(e){}
@@ -758,7 +827,7 @@ function openSheet({title, html, wide}){
   el.addEventListener("touchstart", e => { if(el.scrollTop <= 0 && (e.target.closest(".grab,.sheet-head"))) { y0 = e.touches[0].clientY; el.style.transition = "none"; } }, {passive:true});
   el.addEventListener("touchmove", e => { if(y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); el.style.transform = `translateY(${dy}px)`; }, {passive:true});
   el.addEventListener("touchend", () => { if(y0 == null) return; el.style.transition = ""; el.style.transform = ""; if(dy > 110) api.close(); y0 = null; dy = 0; });
-  sheets.push(api);
+  sheets.push(api); syncSheetFocus();
   requestAnimationFrame(() => { scrim.classList.add("in"); el.classList.add("in"); });
   setTimeout(() => { const f = $("input,textarea", api.body); if(f && window.innerWidth > 700) f.focus(); else $("[data-close]", el).focus({preventScroll:true}); }, 60);
   return api;
@@ -886,15 +955,13 @@ function openProfile(after){
     const name = $("#pName", sh.el).value.trim(), email = $("#pMail", sh.el).value.trim().toLowerCase();
     if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("That email doesn’t look right");
     const nk = keyFor(email);
-    if(nk !== KEY){
-      persist(KEY, S); KEY = nk;
-      const existing = hasProfile(KEY) ? loadProfile(KEY) : null;
-      if(existing) S = existing; // returning profile
-    }
-    if(name) S.name = name;
-    S.email = email; S.photo = photo;
-    setCurrentEmail(email); save(); sh.close(); refresh(); if(after) after();
-    toast(email ? "Signed in as " + email : "Profile saved");
+    const candidate = normalize({...((nk !== KEY ? loadProfile(nk) : null) || S), name, email, photo});
+    if(!save()) return;
+    try{ applyBackup({profiles:{[nk]:candidate}, current:email}); }
+    catch(error){ return toast(error.message); }
+    KEY = nk; S = candidate;
+    sh.close(); refresh(); if(after) after();
+    toast("Profile saved");
   };
 }
 
@@ -946,7 +1013,7 @@ function openCrop(img, target, done){
 // ================= backup, import, restore =================
 async function exportBackup(){
   persist(KEY, S);
-  const data = buildBackup();
+  const data = buildBackup(KEY, S);
   const name = "streak-backup-" + today + ".json";
   const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
   let shared = false;
@@ -978,8 +1045,14 @@ function importFile(file, after){
       ${mine.logged ? `<div class="risk" style="margin:0 0 14px">${ic("alert","sm")}<span>This replaces the ${mine.logged} days currently on this device. A restore point of them is saved first.</span></div>` : ""}
       <button class="btn primary block press" id="iGo">${ic("upload","sm")} Import ${Object.keys(parsed.profiles).length > 1 ? Object.keys(parsed.profiles).length + " profiles" : "everything"}</button>`});
     $("#iGo", sh.el).onclick = async () => {
-      if(mine.logged) await dailySnapshot(KEY, S, "before-import-" + Date.now());
-      applyBackup(parsed);
+      const button = $("#iGo", sh.el); button.disabled = true;
+      try{
+        for(const key of Object.keys(parsed.profiles)){
+          const existing = key === KEY ? S : loadProfile(key);
+          if(existing && !await dailySnapshot(key, existing, "before-import-" + Date.now())) throw new Error("Couldn't save a restore point. Your data hasn't been replaced. Export a backup and try again.");
+        }
+        applyBackup(parsed);
+      }catch(error){ button.disabled = false; return toast(error.message); }
       KEY = keyFor(currentEmail());
       S = loadProfile(KEY) || blankState();
       save(); selected = today; viewYear = fromIso(today).getFullYear();
@@ -988,6 +1061,7 @@ function importFile(file, after){
       toast(`Welcome back — ${sm.logged} days restored`);
     };
   };
+  r.onerror = () => toast("Couldn’t read that file. Choose it again.");
   r.readAsText(file);
 }
 async function openRestore(after){
@@ -999,8 +1073,10 @@ async function openRestore(after){
   sh.body.addEventListener("click", async e => {
     const b = e.target.closest("[data-s]"); if(!b) return;
     const snap = snaps[+b.dataset.s], prev = S;
-    await dailySnapshot(KEY, S, "before-restore-" + Date.now());
-    S = snapshotState(snap); save(); sh.close(); if(after) after(); refresh();
+    if(!await dailySnapshot(KEY, S, "before-restore-" + Date.now())) return toast("Couldn't save a restore point. Export a backup before trying again.");
+    S = snapshotState(snap);
+    if(!save()){ S = prev; return; }
+    sh.close(); if(after) after(); refresh();
     toast("Restored", {action:"Undo", fn: () => { S = prev; save(); refresh(); }});
   });
 }
@@ -1087,7 +1163,11 @@ function rollover(){
 }
 setInterval(rollover, 30000);
 document.addEventListener("visibilitychange", () => { if(!document.hidden) rollover(); });
-window.addEventListener("storage", e => { if(e.key === KEY && e.newValue){ S = normalize(JSON.parse(e.newValue)); refresh(); } });
+window.addEventListener("storage", e => {
+  if(e.key === KEY && e.newValue){
+    try{ S = normalize(JSON.parse(e.newValue)); refresh(); }catch(error){ toast("Couldn't read changes from another tab. Export a backup and reload."); }
+  }
+});
 
 ensureDailyRecall();
 if(!firstRun) save();
