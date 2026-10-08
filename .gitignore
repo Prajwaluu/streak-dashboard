@@ -5,3 +5,8 @@ streak-backup-*.json
 .DS_Store
 node_modules/
 .impeccable/review/
+
+# Private hosting linkage and deployment output
+.vercel/
+.release/
+.sites-runtime/

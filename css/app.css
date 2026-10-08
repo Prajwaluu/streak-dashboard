@@ -1,7 +1,4 @@
-/* Streak — design system.
-   Editorial type and paper appearances from Margin (white → cream → night, Charter headings,
-   blue italic emphasis, blue primary actions, spring motion, floating header + dock);
-   calm green "facts, not guesses" status language from Tripti / Transport Nepal. */
+/* Streak: editorial typography, three paper appearances, and clear outcome colors. */
 
 :root{
   --bg:#f4f4f6; --surface:#ffffff; --surface-2:#f7f7f9; --surface-3:#eeeef1;

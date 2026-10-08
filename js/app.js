@@ -814,7 +814,7 @@ function openChapters(bi){
 }
 
 // ================= settings / profile =================
-const PUBLIC_APP_URL = new URL("./", location.href).href;
+const PUBLIC_APP_URL = "https://streak-daybook.vercel.app/";
 async function shareStreak(){
   if(navigator.share){
     try{ await navigator.share({title:"Streak", text:"A private daily journal for your wins, balance, and fresh starts.", url:PUBLIC_APP_URL}); return; }
