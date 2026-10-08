@@ -6,13 +6,13 @@ Static files only: no build step and no dependencies. Data stays in the browser'
 
 ## Use and share
 
-Open [Streak](https://prajwaluu.github.io/streak-dashboard/) and share that same link with anyone. No account, approval, or installation is required. Each device keeps its own entries; there is no automatic cloud sync. Use **Settings → Share Streak** to send the link through your phone’s share sheet or copy it. New users can start logging immediately and add an optional profile later.
+Use **Settings → Share Streak** to share the current public app address. No account, approval, or installation is required. Each device keeps its own entries; there is no automatic cloud sync. New users can start logging immediately and add an optional profile later.
 
-- **iPhone:** open in Safari, then Share → Add to Home Screen. Enable Open as Web App if offered.
-- **Android:** open in Chrome, then its menu → Install and create shortcut → Install (the wording can vary by Chrome version).
-- **Move your history:** export a backup from the current installation, then import it in the new installation.
+- **iPhone:** open in Safari, then Share → Add to Home Screen.
+- **Android:** open in Chrome, then its menu → Add to Home screen or Install app.
+- **Move your history:** export a backup from the current installation, then import it in the new installation. Changing the site's address does not carry browser storage across automatically.
 
-GitHub Pages publishes `main`. `.nojekyll` serves the static files directly. Personal backups and local preview fixtures are excluded from Git.
+Publish only the app assets: `index.html`, `manifest.webmanifest`, `sw.js`, `css/`, `js/`, and `icons/`. Keep `.git`, documentation, tests, backups, and migration files out of public deployment output.
 
 ## Run locally
 
@@ -28,11 +28,7 @@ Then open http://localhost:5173.
 node --test tests/*.test.mjs
 ```
 
-The tests run the old app's streak, year-stats and momentum code next to the new logic. They also run against `migration/streak-backup-from-iphone.json` when that file is present.
-
-## Moving data from the iPhone app
-
-`migration/streak-backup-from-iphone.json` was pulled from the iOS app's WebKit storage. It is git-ignored and never published. A copy is in iCloud Drive. On the iPhone, open the web app, choose **Import backup from the old app**, and pick the file from iCloud Drive.
+The tests cover streak calculations, period comparisons, outcomes, and legacy data compatibility. Personal migration files are excluded from Git and deployment output.
 
 ## Keeping data safe
 
